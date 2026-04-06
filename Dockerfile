@@ -59,7 +59,7 @@ RUN mkdir -p /opt/zed_ws/src \
     && git clone --branch master --depth 1 \
         https://github.com/stereolabs/zed-ros2-wrapper.git \
     && cd /opt/zed_ws \
-    && . /opt/ros/jazzy/setup.bash \
+    && . /opt/ros/jazzy/setup.sh \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
     && colcon build \
