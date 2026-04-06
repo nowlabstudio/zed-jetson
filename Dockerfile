@@ -25,12 +25,18 @@ FROM dustynv/ros:jazzy-ros-base-r36.4.0-cu128-24.04
 #                 A modellek /usr/local/zed/resources/-ben tárolódnak (host-mounted volume)
 ARG ZED_SDK_URL=https://download.stereolabs.com/zedsdk/5.0/l4t36.4/jetsons
 
-RUN apt-get update \
+# ROS2 apt kulcs frissítése — dustynv base-ben lejárt (EXPKEYSIG F42ED6FBAB17C654)
+# Azonos workaround mint realsense-jetson/Dockerfile-ban
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+        -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         wget \
         zstd \
         libgomp1 \
         libopenblas-dev \
+        python3-colcon-common-extensions \
+        git \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q "${ZED_SDK_URL}" -O /tmp/zed_sdk.run \
@@ -53,7 +59,6 @@ RUN mkdir -p /opt/zed_ws/src \
     && git clone --branch master --depth 1 \
         https://github.com/stereolabs/zed-ros2-wrapper.git \
     && cd /opt/zed_ws \
-    && apt-get update \
     && . /opt/ros/jazzy/setup.bash \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
