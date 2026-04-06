@@ -88,7 +88,7 @@ RUN mkdir -p /opt/zed_ws/src \
         --packages-select zed_interfaces zed_components zed_wrapper zed_ros2_wrapper \
         --cmake-args \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="/opt/ros/jazzy/install" \
+            "-DCMAKE_PREFIX_PATH=/opt/ros/jazzy/install;/opt/ros/jazzy" \
     && rm -rf /opt/zed_ws/log /opt/zed_ws/build \
     && rm -rf /opt/zed_ws/src/zed-ros2-wrapper
 
