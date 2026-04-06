@@ -17,11 +17,13 @@ FROM dustynv/ros:jazzy-ros-base-r36.4.0-cu128-24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# ZED SDK 5.x — Jetson L4T R36.4 (JetPack 6.2)
+# ZED SDK 5.2 — Jetson L4T R36.4 (JetPack 6.2) → redirects to 5.2.3
 # silent:         GUI, interaktív prompts kihagyva
 # skip_tools:     ZED Explorer/Diagnostic tools (nincs display)
 # skip_od_module: Object detection model kihagyva — /usr/local/zed/resources/ (host-mounted)
-ARG ZED_SDK_URL=https://download.stereolabs.com/zedsdk/5.0/l4t36.4/jetsons
+# 5.0→5.2 upgrade: v5.2.2 wrapper sl::CustomObjectDetectionProperties::object_tracking_parameters
+#                  csak 5.2+ SDK-ban létezik
+ARG ZED_SDK_URL=https://download.stereolabs.com/zedsdk/5.2/l4t36.4/jetsons
 
 # ── 1. ROS2 apt kulcs + build függőségek ──────────────────────────────────────
 # --force-overwrite: dustynv NVIDIA OpenCV 4.11 ↔ apt libopencv-*-dev 4.6 dpkg ütközés
