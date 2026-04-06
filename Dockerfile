@@ -68,6 +68,7 @@ RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         ros-jazzy-tf2-eigen \
         ros-jazzy-rmw-cyclonedds-cpp \
         ros-jazzy-backward-ros \
+        ros-jazzy-xacro \
         ros-jazzy-stereo-msgs \
         ros-jazzy-visualization-msgs \
         ros-jazzy-shape-msgs \
