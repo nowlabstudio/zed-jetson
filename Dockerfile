@@ -93,7 +93,7 @@ ENV PATH=/usr/local/zed/tools:${PATH}
 # zed-ros2-wrapper v5.2.2 (Jazzy, 2026-04-01)
 RUN mkdir -p /opt/zed_ws/src \
     && cd /opt/zed_ws/src \
-    && git clone --branch main --depth 1 \
+    && git clone --branch master --depth 1 \
         https://github.com/stereolabs/zed-ros2-interfaces.git \
     && git clone --branch v5.2.2 --depth 1 \
         https://github.com/stereolabs/zed-ros2-wrapper.git \
