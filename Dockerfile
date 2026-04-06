@@ -91,18 +91,23 @@ ENV PATH=/usr/local/zed/tools:${PATH}
 # ── 3. zed_ros2_wrapper colcon build ──────────────────────────────────────────
 # rosdep KIHAGYVA — deps kézzel telepítve fent (--force-overwrite miatt)
 # CMAKE_PREFIX_PATH: /opt/ros/jazzy/install (dustynv forrásból buildelt ROS2 prefix)
-# zed_msgs: KÜLÖN repóban van (stereolabs/zed-ros2-interfaces) — előbb kell buildelni
-# zed-ros2-wrapper v5.2.2 (Jazzy, 2026-04-01)
+# Stereolabs 5.x — három külön repó:
+#   zed-ros2-interfaces  → zed_msgs (üzenettípusok)
+#   zed-ros2-description → zed_description (URDF)
+#   zed-ros2-wrapper     → zed_components, zed_wrapper
+# Build sorrend: zed_msgs → zed_description → zed_components + zed_wrapper
 RUN mkdir -p /opt/zed_ws/src \
     && cd /opt/zed_ws/src \
     && git clone --branch master --depth 1 \
         https://github.com/stereolabs/zed-ros2-interfaces.git \
+    && git clone --branch main --depth 1 \
+        https://github.com/stereolabs/zed-ros2-description.git \
     && git clone --branch v5.2.2 --depth 1 \
         https://github.com/stereolabs/zed-ros2-wrapper.git \
     && cd /opt/zed_ws \
     && . /opt/ros/jazzy/install/setup.sh \
     && colcon build \
-        --packages-select zed_msgs \
+        --packages-select zed_msgs zed_description \
         --cmake-args \
             -DCMAKE_BUILD_TYPE=Release \
             "-DCMAKE_PREFIX_PATH=/opt/ros/jazzy/install;/opt/ros/jazzy" \
@@ -114,7 +119,8 @@ RUN mkdir -p /opt/zed_ws/src \
             "-DCMAKE_PREFIX_PATH=/opt/ros/jazzy/install;/opt/ros/jazzy" \
     && rm -rf /opt/zed_ws/log /opt/zed_ws/build \
     && rm -rf /opt/zed_ws/src/zed-ros2-wrapper \
-    && rm -rf /opt/zed_ws/src/zed-ros2-interfaces
+    && rm -rf /opt/zed_ws/src/zed-ros2-interfaces \
+    && rm -rf /opt/zed_ws/src/zed-ros2-description
 
 # PATH — dustynv workaround (ros2 CLI: install/bin alatt van)
 ENV PATH=/opt/ros/jazzy/install/bin:/opt/ros/jazzy/bin:${PATH}
