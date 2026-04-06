@@ -66,6 +66,11 @@ RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         ros-jazzy-tf2-eigen \
         ros-jazzy-rmw-cyclonedds-cpp \
         ros-jazzy-backward-ros \
+        ros-jazzy-stereo-msgs \
+        ros-jazzy-visualization-msgs \
+        ros-jazzy-shape-msgs \
+        ros-jazzy-rosgraph-msgs \
+        ros-jazzy-point-cloud-transport \
         libgeographiclib-dev \
     && apt-get install -y --no-install-recommends \
         ros-jazzy-robot-localization \
@@ -84,14 +89,16 @@ ENV PATH=/usr/local/zed/tools:${PATH}
 # ── 3. zed_ros2_wrapper colcon build ──────────────────────────────────────────
 # rosdep KIHAGYVA — deps kézzel telepítve fent (--force-overwrite miatt)
 # CMAKE_PREFIX_PATH: /opt/ros/jazzy/install (dustynv forrásból buildelt ROS2 prefix)
+# v5.2.2 tag (Jazzy, 2026-04-01) — master branch-en zed_msgs hiányzik (repo bug)
+# --packages-select: zed_msgs NEM létezik a repóban → kihagyva
 RUN mkdir -p /opt/zed_ws/src \
     && cd /opt/zed_ws/src \
-    && git clone --branch master --depth 1 \
+    && git clone --branch v5.2.2 --depth 1 \
         https://github.com/stereolabs/zed-ros2-wrapper.git \
     && cd /opt/zed_ws \
     && . /opt/ros/jazzy/install/setup.sh \
     && colcon build \
-        --packages-select zed_msgs zed_interfaces zed_components zed_wrapper zed_ros2_wrapper \
+        --packages-select zed_interfaces zed_components zed_wrapper \
         --cmake-args \
             -DCMAKE_BUILD_TYPE=Release \
             "-DCMAKE_PREFIX_PATH=/opt/ros/jazzy/install;/opt/ros/jazzy" \
