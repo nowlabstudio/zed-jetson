@@ -1,0 +1,107 @@
+# =============================================================================
+# zed_params.yaml — ZED 2i ROS2 paraméterek
+# =============================================================================
+#
+# Format: zed_ros2_wrapper config_path paraméter olvassa
+# A wrapper a "/**" wildcard alatti ros__parameters szekciót alkalmazza.
+#
+# Optimalizálva: Jetson Orin Nano 8GB, JetPack 6.2, zed_ros2_wrapper 5.x
+#
+# Volume-mounted: zed-jetson/zed_params.yaml → /config/zed_params.yaml
+# Módosítás után: make restart (rebuild NEM kell)
+# =============================================================================
+
+/**:
+  ros__parameters:
+
+    # ── Általános kamera beállítások ─────────────────────────────────────────
+    general:
+      camera_model: zed2i
+      camera_name: zed
+      # Kamera sorszám — üresen hagyva: első talált ZED kamera (bármely USB port)
+      # Ha több ZED is csatlakozik, itt adható meg a sorszám (lsusb → zed-diag)
+      serial_number: 0
+      resolution: 2             # 2=HD1080 (1920×1080) — teljes felbontás FOLLOW módhoz
+                                # 3=VGA (672×376)  — ha teljesítményprobléma van
+                                # 4=HD720 (1280×720) — közepes kompromisszum
+      grab_frame_rate: 30
+      pub_frame_rate: 15.0      # Publikálási frekvencia — 15Hz: Orin Nano terhelés csökkentés
+                                # Ha elegendő teljesítmény: 30.0-ra emelni
+      self_calib: true          # Önkalibrálás engedélyezve (jobb mélységminőség)
+      camera_flip: false        # Kamera nem fordítva van felszerelve
+
+    # ── Mélységérzékelés ──────────────────────────────────────────────────────
+    depth:
+      depth_mode: 1             # 1=PERFORMANCE — ajánlott Orin Nano-n
+                                # 4=NEURAL_LIGHT — jobb minőség, TensorRT kell (cache után)
+                                # NEURAL_LIGHT aktiválás: depth_mode: 4 + make restart
+      depth_stabilization: 50  # 0=max reakcióképesség, 100=max stabilitás; 50=egyensúly
+      depth_confidence: 50      # 0-100: mélységpont elfogadási küszöb (100=csak biztos)
+      depth_texture_conf: 100   # textúra alapú szűrés
+      min_depth: 0.3            # Minimális mélység [m] — ZED 2i fizikai limit ~0.3m
+      max_depth: 10.0           # Maximális mélység [m] — 10m elég szemkövetéshez
+
+    # ── Pontfelhő ─────────────────────────────────────────────────────────────
+    point_cloud:
+      point_cloud_freq: 5.0     # Pointcloud publikálási frekvencia [Hz]
+                                # 5Hz: Orin Nano terhelés csökkentés
+                                # Isaac Sim felvételhez: make mapping-enable → magasabb értékre
+
+    # ── Pozíció követés (vizuális odometria) ──────────────────────────────────
+    pos_tracking:
+      pos_tracking_enabled: true
+      set_as_static: false      # Kamera mozog → false
+      set_gravity_as_origin: true
+      imu_fusion: true          # ZED belső IMU + vizuális odometria fúzió
+      depth_min_range: 0.0      # pos tracking minimum mélység
+
+    # ── IMU ──────────────────────────────────────────────────────────────────
+    sensors:
+      sensors_image_sync: false
+      # ZED 2i beépített IMU: gyorsulásmérő + giroszkóp + barométer
+      # Topic: /zed/zed_node/imu/data (sensor_msgs/Imu)
+      # publish_imu_tf: false — a docker-compose command argumentumban van megadva
+      # Az IMU adat elérhető de a TF fa nem tartalmazza (imu_joint kalibráció pending)
+      # Jövőbeli integráció: EKF-be (mint BNO085 helyett/mellett)
+
+    # ── Body tracking (személykövetés) ────────────────────────────────────────
+    body_tracking:
+      body_trk_enabled: false   # Alapértelmezetten kikapcsolva (erőforrás takarékosság)
+                                # FOLLOW módban: make body-enable → true
+                                # Topic: /zed/zed_node/body_trk/skeletons
+      body_format: 0            # 0=POSE_18 — 18 kulcspontos csontváz (FOLLOW módhoz elég)
+                                # 1=POSE_34 — részletesebb (magasabb CPU overhead)
+      allow_reduced_precision_inference: true   # Orin Nano: FP16 engedélyezése (2× gyorsabb)
+      max_range: 10.0           # Maximális érzékelési távolság [m]
+      body_kp_selection: 0      # 0=FULL — összes kulcspont
+
+    # ── Tárgydetekció ─────────────────────────────────────────────────────────
+    object_detection:
+      od_enabled: false         # Kikapcsolva — body tracking elegendő FOLLOW módhoz
+
+    # ── Térkép (3D mapping — Isaac Sim felvételhez) ───────────────────────────
+    mapping:
+      mapping_enabled: false    # Alapértelmezetten kikapcsolva
+                                # Területi felvételhez: make mapping-enable → true
+                                # Mentés: make mapping-save (/zed/zed_node/save_3d_map service)
+      resolution: 0.05          # Térkép felbontás [m] — 5cm elegendő Isaac Sim-hez
+      max_mapping_range: 10.0   # Maximális térképezési távolság [m]
+
+    # ── Státusz és diagnosztika ───────────────────────────────────────────────
+    # Elérhetővé teszi: /zed/zed_node/status/health, /zed/zed_node/status/heartbeat
+    # A ros_readiness_check.py ezeket használja a ZED indulásának érzékeléséhez.
+    debug:
+      sdk_verbose: 0            # 0=silent, 1=info, 2=verbose
+
+    # ── Foxglove kompatibilitás ───────────────────────────────────────────────
+    # Minden topic elérhető Foxglove-ban — zed_interfaces a foxglove containerben is buildelt.
+    # Elérhető topic-ok:
+    #   /zed/zed_node/rgb/image_rect_color       (Image)
+    #   /zed/zed_node/depth/depth_registered     (Image)
+    #   /zed/zed_node/point_cloud/cloud_registered (PointCloud2)
+    #   /zed/zed_node/body_trk/skeletons         (zed_interfaces/ObjectsStamped)
+    #   /zed/zed_node/odom                       (Odometry)
+    #   /zed/zed_node/pose                       (PoseStamped)
+    #   /zed/zed_node/imu/data                   (Imu)
+    #   /zed/zed_node/status/health              (zed_interfaces/HealthStatusStamped)
+    #   /zed/zed_node/status/heartbeat           (zed_interfaces/Heartbeat)

@@ -1,0 +1,17 @@
+# =============================================================================
+# 99-zed.rules — Stereolabs ZED kamera udev szabály
+# =============================================================================
+#
+# Működés: idVendor alapú (bármely USB porthoz — nincs dedikált port)
+# Telepítés: make install-udev (egyszer kell)
+#
+# Stereolabs USB Vendor ID: 2b03
+#   ZED:     2b03:f580
+#   ZED 2:   2b03:f582
+#   ZED 2i:  2b03:f583
+#   ZED X:   2b03:f685
+#
+# Ellenőrzés: lsusb | grep 2b03
+# =============================================================================
+
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2b03", MODE="0666", GROUP="video"

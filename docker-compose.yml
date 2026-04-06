@@ -1,0 +1,49 @@
+# ZED 2i Docker Stack — Talicska Robot
+#
+# Stereolabs ZED 2i előre néző kamera — személykövetés, szállítás, előremeneti navigáció
+#
+# Aktív módok:  FOLLOW (személykövetés), SHUTTLE (szállítás)
+# Iránykapcsolás: camera_director_node kezeli (cmd_vel_raw figyelés)
+#   - Előremenet → ZED aktív (ez a container)
+#   - Hátramese  → RealSense aktív (realsense-jetson container)
+#
+# USB: bármely USB3 porton működik (udev rule idVendor=2b03 alapján)
+#
+# Indítás:  make camera-fwd-up  (a fő Makefile-ból)
+#           make up             (önálló zed teszt)
+# Build:    make build          (~20 perc, egyszer kell)
+# Validáció: make validate
+
+name: zed
+
+services:
+  ros2-zed:
+    image: ros2-zed:jazzy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
+    container_name: ros2_zed
+    runtime: nvidia             # kötelező: ZED CUDA operációk
+    network_mode: host          # DDS discovery a host networkön (robot containerrel közös)
+    ipc: host
+    restart: unless-stopped
+    privileged: true            # USB3 kamera device hozzáférés
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all   # kötelező ZED GPU/CUDA hozzáféréshez
+      - NVIDIA_VISIBLE_DEVICES=all
+      - ROS_DOMAIN_ID=0
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///root/talicska-robot/cyclonedds.xml
+    volumes:
+      # CycloneDDS konfig — DDS discovery szinkronban a fő stackkel
+      - ../talicska-robot/cyclonedds.xml:/root/talicska-robot/cyclonedds.xml:ro
+      # ZED paraméterek — rebuild nélkül frissíthető
+      - ./zed_params.yaml:/config/zed_params.yaml:ro
+      # USB device hozzáférés — bármely porthoz
+      - /dev/bus/usb:/dev/bus/usb
+      - /dev:/dev
+      # TensorRT model cache — host-mounted, container restart után megmarad
+      # Első futáskor a ZED SDK letölti a neural depth modelleket (~500MB)
+      # Nélküle minden restart újratölti → hosszú init + extra sávszélesség
+      - /usr/local/zed/resources/:/usr/local/zed/resources/
