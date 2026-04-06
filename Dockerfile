@@ -65,6 +65,7 @@ RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         ros-jazzy-angles \
         ros-jazzy-tf2-eigen \
         ros-jazzy-rmw-cyclonedds-cpp \
+        ros-jazzy-backward-ros \
         libgeographiclib-dev \
     && apt-get install -y --no-install-recommends \
         ros-jazzy-robot-localization \
