@@ -62,7 +62,12 @@ RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         ros-jazzy-geographic-msgs \
         ros-jazzy-nmea-msgs \
         ros-jazzy-message-filters \
+        ros-jazzy-angles \
+        ros-jazzy-tf2-eigen \
         ros-jazzy-rmw-cyclonedds-cpp \
+        libgeographiclib-dev \
+    && apt-get install -y --no-install-recommends \
+        ros-jazzy-robot-localization \
     && rm -rf /var/lib/apt/lists/*
 
 # ── 2. ZED SDK telepítése ──────────────────────────────────────────────────────
@@ -85,7 +90,7 @@ RUN mkdir -p /opt/zed_ws/src \
     && cd /opt/zed_ws \
     && . /opt/ros/jazzy/install/setup.sh \
     && colcon build \
-        --packages-select zed_interfaces zed_components zed_wrapper zed_ros2_wrapper \
+        --packages-select zed_msgs zed_interfaces zed_components zed_wrapper zed_ros2_wrapper \
         --cmake-args \
             -DCMAKE_BUILD_TYPE=Release \
             "-DCMAKE_PREFIX_PATH=/opt/ros/jazzy/install;/opt/ros/jazzy" \
