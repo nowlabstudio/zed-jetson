@@ -7,7 +7,7 @@ SHELL := /bin/bash
         save-pcd install-udev setup-host topics
 
 # ── ZED ROS2 shell helper ─────────────────────────────────────────────────────
-ZED_ROS := source /opt/ros/jazzy/setup.bash && \
+ZED_ROS := source /opt/ros/jazzy/install/setup.bash && \
             source /opt/zed_ws/install/setup.bash && \
             export CYCLONEDDS_URI=file:///root/talicska-robot/cyclonedds.xml &&
 

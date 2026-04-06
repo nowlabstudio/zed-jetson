@@ -59,14 +59,14 @@ RUN mkdir -p /opt/zed_ws/src \
     && git clone --branch master --depth 1 \
         https://github.com/stereolabs/zed-ros2-wrapper.git \
     && cd /opt/zed_ws \
-    && . /opt/ros/jazzy/setup.sh \
+    && . /opt/ros/jazzy/install/setup.sh \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
     && colcon build \
         --packages-select zed_interfaces zed_components zed_wrapper zed_ros2_wrapper \
         --cmake-args \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="/opt/ros/jazzy" \
+            -DCMAKE_PREFIX_PATH="/opt/ros/jazzy/install" \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /opt/zed_ws/log /opt/zed_ws/build \
     && rm -rf /opt/zed_ws/src/zed-ros2-wrapper
@@ -75,7 +75,7 @@ RUN mkdir -p /opt/zed_ws/src \
 ENV PATH=/opt/ros/jazzy/install/bin:/opt/ros/jazzy/bin:${PATH}
 
 CMD ["/bin/bash", "-c", \
-     "source /opt/ros/jazzy/setup.bash && \
+     "source /opt/ros/jazzy/install/setup.bash && \
       source /opt/zed_ws/install/setup.bash && \
       export CYCLONEDDS_URI=file:///root/talicska-robot/cyclonedds.xml && \
       ros2 launch zed_wrapper zed_camera.launch.py \
