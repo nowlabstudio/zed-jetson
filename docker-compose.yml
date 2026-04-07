@@ -39,10 +39,9 @@ services:
       # (CUDA libnvjpeg hiányzó szimbólum: jpeg_set_hardware_acceleration_parameters_enc)
       - LD_LIBRARY_PATH=/usr/local/zed/lib:/usr/lib/aarch64-linux-gnu/nvidia:/opt/ros/jazzy/lib:/usr/local/cuda/compat:/usr/local/cuda/lib64
     volumes:
-      # CycloneDDS konfig
-      # Standalone teszt (LAN kábel nélkül): cyclonedds-standalone.xml (lo only)
-      # Teljes robot stack: ../talicska-robot/cyclonedds.xml (enP1p1s0 kell)
-      - ./cyclonedds-standalone.xml:/root/talicska-robot/cyclonedds.xml:ro
+      # CycloneDDS konfig — teljes robot stack (lo + enP1p1s0)
+      # Önálló teszthez: cseréld le: ./cyclonedds-standalone.xml:/root/talicska-robot/cyclonedds.xml:ro
+      - ../talicska-robot/cyclonedds.xml:/root/talicska-robot/cyclonedds.xml:ro
       # ZED paraméterek — rebuild nélkül frissíthető
       - ./zed_params.yaml:/config/zed_params.yaml:ro
       # USB device hozzáférés — bármely porthoz
