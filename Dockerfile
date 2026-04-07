@@ -85,6 +85,11 @@ RUN wget -q "${ZED_SDK_URL}" -O /tmp/zed_sdk.run \
     && /tmp/zed_sdk.run -- silent skip_tools skip_od_module \
     && rm -f /tmp/zed_sdk.run
 
+# xacro workaround: apt-installed entry_point script importlib.metadata-t hív,
+# ami nem találja a dist-info-t (apt ≠ pip metadata). Direkt Python hívással helyettesítjük.
+RUN printf '#!/usr/bin/env python3\nimport sys\nfrom xacro import main\nsys.exit(main())\n' \
+    > /opt/ros/jazzy/bin/xacro && chmod +x /opt/ros/jazzy/bin/xacro
+
 ENV LD_LIBRARY_PATH=/usr/local/zed/lib:${LD_LIBRARY_PATH}
 ENV ZED_SDK_ROOT=/usr/local/zed
 ENV PATH=/usr/local/zed/tools:${PATH}
