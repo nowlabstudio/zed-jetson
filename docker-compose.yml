@@ -49,3 +49,6 @@ services:
       # Első futáskor a ZED SDK letölti a neural depth modelleket (~500MB)
       # Nélküle minden restart újratölti → hosszú init + extra sávszélesség
       - /usr/local/zed/resources/:/usr/local/zed/resources/
+      # Kalibrációs fájl — eszközspecifikus, Stereolabs szerveréről töltődik le
+      # Host-mounted: container recreate után sem vész el
+      - /usr/local/zed/settings/:/usr/local/zed/settings/
