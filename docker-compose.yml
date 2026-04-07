@@ -35,6 +35,9 @@ services:
       - ROS_DOMAIN_ID=0
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - CYCLONEDDS_URI=file:///root/talicska-robot/cyclonedds.xml
+      # Jetson libnvjpeg.so CUDA lib előtt — libnvargus_socketclient.so-nak kell
+      # (CUDA libnvjpeg hiányzó szimbólum: jpeg_set_hardware_acceleration_parameters_enc)
+      - LD_LIBRARY_PATH=/usr/local/zed/lib:/usr/lib/aarch64-linux-gnu/nvidia:/opt/ros/jazzy/lib:/usr/local/cuda/compat:/usr/local/cuda/lib64
     volumes:
       # CycloneDDS konfig
       # Standalone teszt (LAN kábel nélkül): cyclonedds-standalone.xml (lo only)
@@ -45,6 +48,7 @@ services:
       # USB device hozzáférés — bármely porthoz
       - /dev/bus/usb:/dev/bus/usb
       - /dev:/dev
+      - /run/udev:/run/udev:ro
       # TensorRT model cache — host-mounted, container restart után megmarad
       # Első futáskor a ZED SDK letölti a neural depth modelleket (~500MB)
       # Nélküle minden restart újratölti → hosszú init + extra sávszélesség

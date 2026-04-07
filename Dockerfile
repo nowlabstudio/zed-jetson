@@ -134,6 +134,8 @@ RUN mkdir -p /opt/zed_ws/src \
         --cmake-args \
             -DCMAKE_BUILD_TYPE=Release \
             "-DCMAKE_PREFIX_PATH=/opt/ros/jazzy/install;/opt/ros/jazzy" \
+            "-DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs" \
+            '-DCMAKE_CXX_FLAGS="-Wl,--allow-shlib-undefined"' \
     && rm -rf /opt/zed_ws/log /opt/zed_ws/build \
     && rm -rf /opt/zed_ws/src
 
