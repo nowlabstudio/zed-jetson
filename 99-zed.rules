@@ -6,12 +6,21 @@
 # Telepítés: make install-udev (egyszer kell)
 #
 # Stereolabs USB Vendor ID: 2b03
-#   ZED:     2b03:f580
-#   ZED 2:   2b03:f582
-#   ZED 2i:  2b03:f583
-#   ZED X:   2b03:f685
+#   ZED 2i (Jetson L4T R36): 2b03:f880 (main), 2b03:f881 (HID)
+#   Régebbi ZED 2i:          2b03:f583
+#   ZED 2:                   2b03:f582
+#   ZED:                     2b03:f580
+#   ZED X:                   2b03:f685
 #
 # Ellenőrzés: lsusb | grep 2b03
 # =============================================================================
 
+# Hozzáférési jogok — minden ZED eszközre
 SUBSYSTEM=="usb", ATTRS{idVendor}=="2b03", MODE="0666", GROUP="video"
+
+# uvcvideo unbind ZED 2i interface-ekről (ZED SDK libusb-t használ, nem uvcvideo-t)
+# Ha a kernel uvcvideo drivert bindol, a container nem tudja megnyitni a kamerát.
+ACTION=="bind", SUBSYSTEM=="usb", ATTRS{idVendor}=="2b03", DRIVERS=="uvcvideo", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/uvcvideo/unbind 2>/dev/null || true'"
+
+# usbhid unbind ZED 2i HID interface-ről
+ACTION=="bind", SUBSYSTEM=="usb", ATTRS{idVendor}=="2b03", DRIVERS=="usbhid", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/usbhid/unbind 2>/dev/null || true'"
