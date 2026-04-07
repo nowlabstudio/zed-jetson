@@ -90,7 +90,9 @@ RUN wget -q "${ZED_SDK_URL}" -O /tmp/zed_sdk.run \
 RUN printf '#!/usr/bin/env python3\nimport sys\nfrom xacro import main\nsys.exit(main())\n' \
     > /opt/ros/jazzy/bin/xacro && chmod +x /opt/ros/jazzy/bin/xacro
 
-ENV LD_LIBRARY_PATH=/usr/local/zed/lib:${LD_LIBRARY_PATH}
+# LD_LIBRARY_PATH — apt ros-jazzy-* lib-jei /opt/ros/jazzy/lib/-be kerülnek,
+# dustynv setup.sh csak az install/lib prefixet adja hozzá
+ENV LD_LIBRARY_PATH=/usr/local/zed/lib:/opt/ros/jazzy/lib:${LD_LIBRARY_PATH}
 ENV ZED_SDK_ROOT=/usr/local/zed
 ENV PATH=/usr/local/zed/tools:${PATH}
 
