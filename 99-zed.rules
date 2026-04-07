@@ -20,7 +20,10 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="2b03", MODE="0666", GROUP="video"
 
 # uvcvideo unbind ZED 2i interface-ekről (ZED SDK libusb-t használ, nem uvcvideo-t)
 # Ha a kernel uvcvideo drivert bindol, a container nem tudja megnyitni a kamerát.
-ACTION=="bind", SUBSYSTEM=="usb", ATTRS{idVendor}=="2b03", DRIVERS=="uvcvideo", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/uvcvideo/unbind 2>/dev/null || true'"
+# Megjegyzés: DEVTYPE és SUBSYSTEM bind eventnél ENV{...} formában kell — a sysfs attr
+# lookup (ATTRS/DEVTYPE kulcsszó) nem megbízható interface-szintű bind eventnél.
+# ENV{PRODUCT} format: vendor/product/version hex (pl. 2b03/f880/100)
+ACTION=="bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ENV{PRODUCT}=="2b03/*", DRIVER=="uvcvideo", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/uvcvideo/unbind 2>/dev/null || true'"
 
 # usbhid unbind ZED 2i HID interface-ről
-ACTION=="bind", SUBSYSTEM=="usb", ATTRS{idVendor}=="2b03", DRIVERS=="usbhid", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/usbhid/unbind 2>/dev/null || true'"
+ACTION=="bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ENV{PRODUCT}=="2b03/*", DRIVER=="usbhid", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/usbhid/unbind 2>/dev/null || true'"
