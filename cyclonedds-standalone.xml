@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  CycloneDDS — ZED standalone teszt konfig
+  Csak loopback (lo) — akkor is működik ha enP1p1s0 DOWN (LAN kábel nincs dugva).
+  Használat: make up (önálló zed teszt, robot stack nélkül)
+  Teljes robot stack: a fő cyclonedds.xml van mountolva (enP1p1s0 kell)
+-->
+<CycloneDDS>
+  <Domain>
+    <General>
+      <Interfaces>
+        <NetworkInterface name="lo" priority="default" multicast="false"/>
+      </Interfaces>
+      <AllowMulticast>false</AllowMulticast>
+      <MaxMessageSize>65500B</MaxMessageSize>
+    </General>
+    <Tracing>
+      <Verbosity>warning</Verbosity>
+      <OutputFile>/tmp/cyclonedds.log</OutputFile>
+    </Tracing>
+  </Domain>
+</CycloneDDS>

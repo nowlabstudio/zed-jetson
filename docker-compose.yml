@@ -36,8 +36,10 @@ services:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - CYCLONEDDS_URI=file:///root/talicska-robot/cyclonedds.xml
     volumes:
-      # CycloneDDS konfig — DDS discovery szinkronban a fő stackkel
-      - ../talicska-robot/cyclonedds.xml:/root/talicska-robot/cyclonedds.xml:ro
+      # CycloneDDS konfig
+      # Standalone teszt (LAN kábel nélkül): cyclonedds-standalone.xml (lo only)
+      # Teljes robot stack: ../talicska-robot/cyclonedds.xml (enP1p1s0 kell)
+      - ./cyclonedds-standalone.xml:/root/talicska-robot/cyclonedds.xml:ro
       # ZED paraméterek — rebuild nélkül frissíthető
       - ./zed_params.yaml:/config/zed_params.yaml:ro
       # USB device hozzáférés — bármely porthoz
