@@ -1,42 +1,34 @@
-FROM dustynv/ros:jazzy-ros-base-r36.4.0-cu128-24.04
+FROM stereolabs/zed:5.2-runtime-l4t-r36.4
 # =============================================================================
 # ZED 2i Docker Image — Talicska Robot
 # =============================================================================
 #
 # Platform: Jetson Orin Nano, L4T R36.4.3 (JetPack 6.2), ARM64
 #
-# dustynv-specifikus workaround-ok (azonosak a realsense-jetson/Dockerfile-ban):
-#   --force-overwrite: dustynv NVIDIA OpenCV 4.11 ↔ apt libopencv-*-dev 4.6 ütközés
-#   CMAKE_PREFIX_PATH: /opt/ros/jazzy/install (dustynv forrásból buildelt ROS2)
-#   setup script: /opt/ros/jazzy/install/setup.sh (nem /opt/ros/jazzy/setup.sh)
-#   rosdep KIHAGYVA: rosdep apt hívások nem kezelik a --force-overwrite-ot
-#                    → deps kézzel listázva, azonos elvek mint RealSense Dockerfile-ban
+# Base: stereolabs/zed:5.2-runtime-l4t-r36.4
+#   - ZED SDK 5.2 pre-installálva
+#   - Standard Ubuntu 22.04 base (nem dustynv)
+#   - Normál apt prefix: /opt/ros/jazzy/
+#   - Nincs dustynv workaround szükséges
 #
 # Build: make build (~20 perc, egyszer kell)
 # =============================================================================
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# ZED SDK 5.2 — Jetson L4T R36.4 (JetPack 6.2) → redirects to 5.2.3
-# silent:         GUI, interaktív prompts kihagyva
-# skip_tools:     ZED Explorer/Diagnostic tools (nincs display)
-# skip_od_module: Object detection model kihagyva — /usr/local/zed/resources/ (host-mounted)
-# 5.0→5.2 upgrade: v5.2.2 wrapper sl::CustomObjectDetectionProperties::object_tracking_parameters
-#                  csak 5.2+ SDK-ban létezik
-ARG ZED_SDK_URL=https://download.stereolabs.com/zedsdk/5.2/l4t36.4/jetsons
-
-# ── 1. ROS2 apt kulcs + build függőségek ──────────────────────────────────────
-# --force-overwrite: dustynv NVIDIA OpenCV 4.11 ↔ apt libopencv-*-dev 4.6 dpkg ütközés
-# ROS2 apt key: EXPKEYSIG F42ED6FBAB17C654 a dustynv base-ben — frissítés szükséges
-RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+# ── 1. ROS2 Jazzy apt telepítés ───────────────────────────────────────────────
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        gnupg2 \
+        lsb-release \
+    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+        http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" \
+        > /etc/apt/sources.list.d/ros2.list \
     && apt-get update \
-    && apt-get -o Dpkg::Options::="--force-overwrite" \
-        install -y --no-install-recommends \
-        wget \
-        zstd \
-        libgomp1 \
-        libopenblas-dev \
+    && apt-get install -y --no-install-recommends \
         git \
         cmake \
         build-essential \
@@ -44,8 +36,8 @@ RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         python3-colcon-common-extensions \
         nlohmann-json3-dev \
         libeigen3-dev \
-        ros-jazzy-rosidl-default-generators \
-        ros-jazzy-rosidl-default-runtime \
+        libgeographiclib-dev \
+        ros-jazzy-ros-base \
         ros-jazzy-cv-bridge \
         ros-jazzy-image-transport \
         ros-jazzy-image-transport-plugins \
@@ -68,42 +60,22 @@ RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         ros-jazzy-tf2-eigen \
         ros-jazzy-rmw-cyclonedds-cpp \
         ros-jazzy-backward-ros \
-        ros-jazzy-xacro \
         ros-jazzy-stereo-msgs \
         ros-jazzy-visualization-msgs \
         ros-jazzy-shape-msgs \
         ros-jazzy-rosgraph-msgs \
         ros-jazzy-point-cloud-transport \
-        libgeographiclib-dev \
-    && apt-get install -y --no-install-recommends \
+        ros-jazzy-xacro \
         ros-jazzy-robot-localization \
+        ros-jazzy-rosidl-default-generators \
+        ros-jazzy-rosidl-default-runtime \
     && rm -rf /var/lib/apt/lists/*
 
-# ── 2. ZED SDK telepítése ──────────────────────────────────────────────────────
-RUN wget -q "${ZED_SDK_URL}" -O /tmp/zed_sdk.run \
-    && chmod +x /tmp/zed_sdk.run \
-    && /tmp/zed_sdk.run -- silent skip_tools skip_od_module \
-    && rm -f /tmp/zed_sdk.run
-
-# xacro workaround: apt-installed entry_point script importlib.metadata-t hív,
-# ami nem találja a dist-info-t (apt ≠ pip metadata). Direkt Python hívással helyettesítjük.
-RUN printf '#!/usr/bin/env python3\nimport sys\nfrom xacro import main\nsys.exit(main())\n' \
-    > /opt/ros/jazzy/bin/xacro && chmod +x /opt/ros/jazzy/bin/xacro
-
-# LD_LIBRARY_PATH — apt ros-jazzy-* lib-jei /opt/ros/jazzy/lib/-be kerülnek,
-# dustynv setup.sh csak az install/lib prefixet adja hozzá
-ENV LD_LIBRARY_PATH=/usr/local/zed/lib:/opt/ros/jazzy/lib:${LD_LIBRARY_PATH}
-ENV ZED_SDK_ROOT=/usr/local/zed
-ENV PATH=/usr/local/zed/tools:${PATH}
-
-# ── 3. zed_ros2_wrapper colcon build ──────────────────────────────────────────
-# rosdep KIHAGYVA — deps kézzel telepítve fent (--force-overwrite miatt)
-# CMAKE_PREFIX_PATH: /opt/ros/jazzy/install (dustynv forrásból buildelt ROS2 prefix)
-# Stereolabs 5.x — három külön repó:
-#   zed-ros2-interfaces  → zed_msgs (üzenettípusok)
-#   zed-ros2-description → zed_description (URDF)
-#   zed-ros2-wrapper     → zed_components, zed_wrapper
-# Build sorrend: zed_msgs → zed_description → zed_components + zed_wrapper
+# ── 2. zed_ros2_wrapper colcon build ──────────────────────────────────────────
+# zed_msgs: stereolabs/zed-ros2-interfaces (külön repó)
+# zed_description: stereolabs/zed-ros2-description (külön repó)
+# zed-ros2-wrapper v5.2.2: zed_components + zed_wrapper
+# Build sorrend: zed_msgs + zed_description → zed_components + zed_wrapper
 RUN mkdir -p /opt/zed_ws/src \
     && cd /opt/zed_ws/src \
     && git clone --branch master --depth 1 \
@@ -113,32 +85,22 @@ RUN mkdir -p /opt/zed_ws/src \
     && git clone --branch v5.2.2 --depth 1 \
         https://github.com/stereolabs/zed-ros2-wrapper.git \
     && cd /opt/zed_ws \
-    && . /opt/ros/jazzy/install/setup.sh \
+    && . /opt/ros/jazzy/setup.sh \
     && colcon build \
         --packages-select zed_msgs zed_description \
-        --cmake-args \
-            -DCMAKE_BUILD_TYPE=Release \
-            "-DCMAKE_PREFIX_PATH=/opt/ros/jazzy/install;/opt/ros/jazzy" \
+        --cmake-args -DCMAKE_BUILD_TYPE=Release \
     && . /opt/zed_ws/install/setup.sh \
     && colcon build \
         --packages-select zed_components zed_wrapper \
-        --cmake-args \
-            -DCMAKE_BUILD_TYPE=Release \
-            "-DCMAKE_PREFIX_PATH=/opt/ros/jazzy/install;/opt/ros/jazzy" \
+        --cmake-args -DCMAKE_BUILD_TYPE=Release \
     && rm -rf /opt/zed_ws/log /opt/zed_ws/build \
-    && rm -rf /opt/zed_ws/src/zed-ros2-wrapper \
-    && rm -rf /opt/zed_ws/src/zed-ros2-interfaces \
-    && rm -rf /opt/zed_ws/src/zed-ros2-description
+    && rm -rf /opt/zed_ws/src
 
-# PATH — dustynv workaround (ros2 CLI: install/bin alatt van)
-ENV PATH=/opt/ros/jazzy/install/bin:/opt/ros/jazzy/bin:${PATH}
-# PYTHONPATH — apt ros-jazzy-* csomagok /opt/ros/jazzy/lib/python3.12/site-packages/-ba kerülnek
-# (NEM dist-packages — ez az apt ROS csomagok path-ja a jazzy prefixben)
-# dustynv setup.sh csak az install/ prefixet adja hozzá → xacro modul nem látható nélküle
-ENV PYTHONPATH=/opt/ros/jazzy/lib/python3.12/site-packages:${PYTHONPATH}
+ENV ZED_SDK_ROOT=/usr/local/zed
+ENV PATH=/usr/local/zed/tools:${PATH}
 
 CMD ["/bin/bash", "-c", \
-     "source /opt/ros/jazzy/install/setup.bash && \
+     "source /opt/ros/jazzy/setup.bash && \
       source /opt/zed_ws/install/setup.bash && \
       export CYCLONEDDS_URI=file:///root/talicska-robot/cyclonedds.xml && \
       ros2 launch zed_wrapper zed_camera.launch.py \
