@@ -130,6 +130,9 @@ RUN mkdir -p /opt/zed_ws/src \
 
 # PATH — dustynv workaround (ros2 CLI: install/bin alatt van)
 ENV PATH=/opt/ros/jazzy/install/bin:/opt/ros/jazzy/bin:${PATH}
+# PYTHONPATH — apt ros-jazzy-* csomagok /opt/ros/jazzy/lib/python3.12/dist-packages/-ba kerülnek,
+# dustynv setup.sh csak az install/ prefixet adja hozzá → xacro modul nem látható nélküle
+ENV PYTHONPATH=/opt/ros/jazzy/lib/python3.12/dist-packages:${PYTHONPATH}
 
 CMD ["/bin/bash", "-c", \
      "source /opt/ros/jazzy/install/setup.bash && \
