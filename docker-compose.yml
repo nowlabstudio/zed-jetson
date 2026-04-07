@@ -27,7 +27,7 @@ services:
     runtime: nvidia             # kötelező: ZED CUDA operációk
     network_mode: host          # DDS discovery a host networkön (robot containerrel közös)
     ipc: host
-    restart: unless-stopped
+    restart: "no"               # standalone teszt — ne induljon automatikusan bootkor
     privileged: true            # USB3 kamera device hozzáférés
     environment:
       - NVIDIA_DRIVER_CAPABILITIES=all   # kötelező ZED GPU/CUDA hozzáféréshez
@@ -41,7 +41,7 @@ services:
     volumes:
       # CycloneDDS konfig — teljes robot stack (lo + enP1p1s0)
       # Önálló teszthez: cseréld le: ./cyclonedds-standalone.xml:/root/talicska-robot/cyclonedds.xml:ro
-      - ../talicska-robot/cyclonedds.xml:/root/talicska-robot/cyclonedds.xml:ro
+      - ./cyclonedds-standalone.xml:/root/talicska-robot/cyclonedds.xml:ro  # standalone teszt (was: ../talicska-robot/cyclonedds.xml)
       # ZED paraméterek — rebuild nélkül frissíthető
       - ./zed_params.yaml:/config/zed_params.yaml:ro
       # USB device hozzáférés — bármely porthoz
