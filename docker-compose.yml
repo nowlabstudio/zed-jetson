@@ -24,6 +24,22 @@ services:
       dockerfile: Dockerfile
       network: host
     container_name: ros2_zed
+    # A gyári zed_camera.launch.py a `ros_params_override_path` argumentumot várja
+    # a YAML override-hoz — a `config_path` NEM létező launch arg, ignorálódik.
+    # A következő rebuild alkalmával a Dockerfile CMD is erre frissül.
+    command:
+      - /bin/bash
+      - -c
+      - |
+        source /opt/ros/jazzy/install/setup.bash && \
+        source /opt/zed_ws/install/setup.bash && \
+        export CYCLONEDDS_URI=file:///root/talicska-robot/cyclonedds.xml && \
+        ros2 launch zed_wrapper zed_camera.launch.py \
+          camera_model:=zed2i \
+          camera_name:=zed \
+          node_name:=zed_node \
+          ros_params_override_path:=/config/zed_params.yaml \
+          publish_imu_tf:=false
     runtime: nvidia             # kötelező: ZED CUDA operációk
     network_mode: host          # DDS discovery a host networkön (robot containerrel közös)
     ipc: host
@@ -52,6 +68,11 @@ services:
       # Első futáskor a ZED SDK letölti a neural depth modelleket (~500MB)
       # Nélküle minden restart újratölti → hosszú init + extra sávszélesség
       - /usr/local/zed/resources/:/usr/local/zed/resources/
-      # Kalibrációs fájl — eszközspecifikus, Stereolabs szerveréről töltődik le
-      # Host-mounted: container recreate után sem vész el
-      - /usr/local/zed/settings/:/usr/local/zed/settings/
+      # Kalibrációs fájl — PER-FILE READ-ONLY mount a repo-ból
+      # FONTOS: a könyvtár-szintű rw mount korábban oda vezetett, hogy az SDK a
+      # Stereolabs szerver hibaüzenetét ("Serial number not found !") belírta a
+      # fájlba, felülírva a közelítő kalibrációt. A per-file :ro mount ezt gátolja.
+      # Factory kalibráció beszerzése (backlog): Stereolabs support ticket
+      # vagy helyszíni ZED_Calibration tool sakktáblával → utána a repo SN*.conf
+      # lecserélhető a valódi factory fájlra.
+      - ./SN98214176.conf:/usr/local/zed/settings/SN98214176.conf:ro

@@ -1,107 +1,116 @@
 # =============================================================================
-# zed_params.yaml — ZED 2i ROS2 paraméterek
+# zed_params.yaml — ZED 2i ROS2 override paraméterek (Talicska robot)
 # =============================================================================
 #
-# Format: zed_ros2_wrapper config_path paraméter olvassa
-# A wrapper a "/**" wildcard alatti ros__parameters szekciót alkalmazza.
+# Betöltési mód: `ros_params_override_path:=/config/zed_params.yaml`
+# Betöltési sorrend (Stereolabs zed_camera.launch.py):
+#   1. common_stereo.yaml   (gyári default, wrapper package share-ből)
+#   2. zed2i.yaml            (kamera-specifikus gyári default)
+#   3. object_detection.yaml + custom_object_detection.yaml (gyári)
+#   4. EZ A FÁJL             (csak a gyáritól eltérő értékek, override)
+#   5. launch argumentumok (pl. publish_imu_tf)
 #
-# Optimalizálva: Jetson Orin Nano 8GB, JetPack 6.2, zed_ros2_wrapper 5.x
+# Kulcsnevek és érték-típusok SZIGORÚAN a gyári common_stereo.yaml + zed2i.yaml
+# szerint (wrapper v5.2.2, SDK 5.2.3):
+#   - depth_mode: STRING enum ('NONE','NEURAL_LIGHT','NEURAL','NEURAL_PLUS')
+#   - grab_resolution: STRING ('HD2K','HD1080','HD720','VGA','AUTO')
+#   - point_cloud_res: STRING ('COMPACT','REDUCED')
+#   - body_tracking.body_format: STRING ('BODY_18','BODY_34','BODY_38')
+#   - object_detection.detection_model: STRING ('MULTI_CLASS_BOX_FAST', ...)
 #
-# Volume-mounted: zed-jetson/zed_params.yaml → /config/zed_params.yaml
-# Módosítás után: make restart (rebuild NEM kell)
+# Szerepek:
+#   - Orin Nano 8GB teljesítmény-konzervatív publish rate-ek
+#   - Minden ZED 2i szenzor (IMU, baro, mag, temp) publikálva
+#   - Pos tracking aktív (vizuális odometria + IMU fusion)
+#   - Body tracking / object detection / mapping alapból OFF (make target toggle)
+#
+# Volume mount:   zed-jetson/zed_params.yaml → /config/zed_params.yaml  (read-only)
+# Módosítás után: `make restart`  (rebuild NEM kell)
 # =============================================================================
 
+---
 /**:
   ros__parameters:
 
-    # ── Általános kamera beállítások ─────────────────────────────────────────
+    # ── GENERAL ───────────────────────────────────────────────────────────────
+    # grab_resolution + grab_frame_rate a gyári zed2i.yaml-ban HD1080@30 (default).
+    # Csak a publish rate-et korlátozzuk Orin Nano-hoz.
     general:
-      camera_model: zed2i
-      camera_name: zed
-      # Kamera sorszám — üresen hagyva: első talált ZED kamera (bármely USB port)
-      # Ha több ZED is csatlakozik, itt adható meg a sorszám (lsusb → zed-diag)
-      serial_number: 0
-      resolution: 2             # 2=HD1080 (1920×1080) — teljes felbontás FOLLOW módhoz
-                                # 3=VGA (672×376)  — ha teljesítményprobléma van
-                                # 4=HD720 (1280×720) — közepes kompromisszum
-      grab_frame_rate: 30
-      pub_frame_rate: 15.0      # Publikálási frekvencia — 15Hz: Orin Nano terhelés csökkentés
-                                # Ha elegendő teljesítmény: 30.0-ra emelni
-      self_calib: true          # Önkalibrálás engedélyezve (jobb mélységminőség)
-      camera_flip: false        # Kamera nem fordítva van felszerelve
+      pub_frame_rate: 15.0          # [Hz] kép + depth publish rate (grab: 30 → pub: 15)
+      # grab_compute_capping_fps: 0.0 — gyári, nem kell módosítani
 
-    # ── Mélységérzékelés ──────────────────────────────────────────────────────
+    # ── DEPTH ─────────────────────────────────────────────────────────────────
+    # Első indításra 'NONE' — csak RGB + IMU + pos_tracking (vizuális odometria).
+    # Stabil stream validálás után: váltás 'NEURAL_LIGHT'-ra
+    # (első futás ~6 perc TensorRT modell optimalizáció + /usr/local/zed/resources/ cache).
     depth:
-      depth_mode: 1             # 1=PERFORMANCE — ajánlott Orin Nano-n
-                                # 4=NEURAL_LIGHT — jobb minőség, TensorRT kell (cache után)
-                                # NEURAL_LIGHT aktiválás: depth_mode: 4 + make restart
-      depth_stabilization: 50  # 0=max reakcióképesség, 100=max stabilitás; 50=egyensúly
-      depth_confidence: 50      # 0-100: mélységpont elfogadási küszöb (100=csak biztos)
-      depth_texture_conf: 100   # textúra alapú szűrés
-      min_depth: 0.3            # Minimális mélység [m] — ZED 2i fizikai limit ~0.3m
-      max_depth: 10.0           # Maximális mélység [m] — 10m elég szemkövetéshez
+      depth_mode: 'NONE'            # első teszthez; production: 'NEURAL_LIGHT'
+      point_cloud_freq: 5.0         # [Hz] gyári: 10.0 — Orin Nano terhelés csökkentés
+      depth_confidence: 50          # [DYN] 0-100, szigorúbb szűrés kisebb érték (gyári: 95)
 
-    # ── Pontfelhő ─────────────────────────────────────────────────────────────
-    point_cloud:
-      point_cloud_freq: 5.0     # Pointcloud publikálási frekvencia [Hz]
-                                # 5Hz: Orin Nano terhelés csökkentés
-                                # Isaac Sim felvételhez: make mapping-enable → magasabb értékre
+    # ── SENSORS (IMU + baro + mag + temp) ─────────────────────────────────────
+    # Minden ZED 2i szenzor publikálva, hogy a teljes adatkészlet elérhető legyen.
+    sensors:
+      publish_imu: true             # gyári: true (explicit)
+      publish_mag: true             # gyári: false — ZED 2i magnetometer engedélyezve
+      publish_baro: true            # gyári: false — ZED 2i barometer engedélyezve
+      publish_temp: true            # gyári: false — CMOS + IMU hőmérséklet
+      publish_imu_raw: false        # raw (nem kalibrált) IMU nem kell
+      sensors_pub_rate: 100.0       # [Hz] IMU publish rate (gyári default)
 
-    # ── Pozíció követés (vizuális odometria) ──────────────────────────────────
+    # ── POSITIONAL TRACKING ───────────────────────────────────────────────────
+    # Vizuális odometria + ZED 2i IMU fusion. Alapvető FOLLOW/SHUTTLE módhoz.
     pos_tracking:
       pos_tracking_enabled: true
-      set_as_static: false      # Kamera mozog → false
+      pos_tracking_mode: 'GEN_3'    # GEN_3 = legjobb minőség (v5.2 default: 'AUTO')
+      imu_fusion: true
       set_gravity_as_origin: true
-      imu_fusion: true          # ZED belső IMU + vizuális odometria fúzió
-      depth_min_range: 0.0      # pos tracking minimum mélység
+      publish_odom_pose: true
 
-    # ── IMU ──────────────────────────────────────────────────────────────────
-    sensors:
-      sensors_image_sync: false
-      # ZED 2i beépített IMU: gyorsulásmérő + giroszkóp + barométer
-      # Topic: /zed/zed_node/imu/data (sensor_msgs/Imu)
-      # publish_imu_tf: false — a docker-compose command argumentumban van megadva
-      # Az IMU adat elérhető de a TF fa nem tartalmazza (imu_joint kalibráció pending)
-      # Jövőbeli integráció: EKF-be (mint BNO085 helyett/mellett)
-
-    # ── Body tracking (személykövetés) ────────────────────────────────────────
-    body_tracking:
-      body_trk_enabled: false   # Alapértelmezetten kikapcsolva (erőforrás takarékosság)
-                                # FOLLOW módban: make body-enable → true
-                                # Topic: /zed/zed_node/body_trk/skeletons
-      body_format: 0            # 0=POSE_18 — 18 kulcspontos csontváz (FOLLOW módhoz elég)
-                                # 1=POSE_34 — részletesebb (magasabb CPU overhead)
-      allow_reduced_precision_inference: true   # Orin Nano: FP16 engedélyezése (2× gyorsabb)
-      max_range: 10.0           # Maximális érzékelési távolság [m]
-      body_kp_selection: 0      # 0=FULL — összes kulcspont
-
-    # ── Tárgydetekció ─────────────────────────────────────────────────────────
-    object_detection:
-      od_enabled: false         # Kikapcsolva — body tracking elegendő FOLLOW módhoz
-
-    # ── Térkép (3D mapping — Isaac Sim felvételhez) ───────────────────────────
+    # ── MAPPING (3D spatial mapping) ──────────────────────────────────────────
+    # Runtime service-szel kapcsolható (make mapping-enable / make mapping-save).
     mapping:
-      mapping_enabled: false    # Alapértelmezetten kikapcsolva
-                                # Területi felvételhez: make mapping-enable → true
-                                # Mentés: make mapping-save (/zed/zed_node/save_3d_map service)
-      resolution: 0.05          # Térkép felbontás [m] — 5cm elegendő Isaac Sim-hez
-      max_mapping_range: 10.0   # Maximális térképezési távolság [m]
+      mapping_enabled: false
+      resolution: 0.05              # [m] 5 cm voxel, Isaac Sim-hez elegendő
 
-    # ── Státusz és diagnosztika ───────────────────────────────────────────────
-    # Elérhetővé teszi: /zed/zed_node/status/health, /zed/zed_node/status/heartbeat
-    # A ros_readiness_check.py ezeket használja a ZED indulásának érzékeléséhez.
+    # ── OBJECT DETECTION ──────────────────────────────────────────────────────
+    # Runtime service-szel kapcsolható (make od-enable).
+    object_detection:
+      od_enabled: false
+      detection_model: 'MULTI_CLASS_BOX_FAST'   # Orin Nano: FAST model
+      allow_reduced_precision_inference: true   # FP16 engedélyezve
+
+    # ── BODY TRACKING (személykövetés — FOLLOW mód) ──────────────────────────
+    # Runtime service-szel kapcsolható (make body-enable).
+    body_tracking:
+      bt_enabled: false
+      model: 'HUMAN_BODY_MEDIUM'    # Orin Nano-n MEDIUM megy; ACCURATE túl terhelés
+      body_format: 'BODY_18'        # FOLLOW-hoz 18 kulcspont elég
+      body_kp_selection: 'FULL'
+      max_range: 10.0               # [m]
+      allow_reduced_precision_inference: true
+
+    # ── DEBUG ─────────────────────────────────────────────────────────────────
     debug:
-      sdk_verbose: 0            # 0=silent, 1=info, 2=verbose
+      sdk_verbose: 2                # 0=silent, 1=info (default), 2=verbose
+      debug_common: true
+      debug_video_depth: true
 
-    # ── Foxglove kompatibilitás ───────────────────────────────────────────────
-    # Minden topic elérhető Foxglove-ban — zed_interfaces a foxglove containerben is buildelt.
-    # Elérhető topic-ok:
-    #   /zed/zed_node/rgb/image_rect_color       (Image)
-    #   /zed/zed_node/depth/depth_registered     (Image)
-    #   /zed/zed_node/point_cloud/cloud_registered (PointCloud2)
-    #   /zed/zed_node/body_trk/skeletons         (zed_interfaces/ObjectsStamped)
-    #   /zed/zed_node/odom                       (Odometry)
-    #   /zed/zed_node/pose                       (PoseStamped)
-    #   /zed/zed_node/imu/data                   (Imu)
-    #   /zed/zed_node/status/health              (zed_interfaces/HealthStatusStamped)
-    #   /zed/zed_node/status/heartbeat           (zed_interfaces/Heartbeat)
+# =============================================================================
+# Foxglove / ROS2 publikált topic-ok (a fenti beállítások mellett):
+#   /zed/zed_node/rgb/image_rect_color           (sensor_msgs/Image)
+#   /zed/zed_node/depth/depth_registered         (sensor_msgs/Image)      [depth_mode != 'NONE']
+#   /zed/zed_node/point_cloud/cloud_registered   (sensor_msgs/PointCloud2) [depth_mode != 'NONE']
+#   /zed/zed_node/imu/data                       (sensor_msgs/Imu)
+#   /zed/zed_node/atm_press                      (sensor_msgs/FluidPressure)
+#   /zed/zed_node/magnetic_field                 (sensor_msgs/MagneticField)
+#   /zed/zed_node/left_cam_temp                  (sensor_msgs/Temperature)
+#   /zed/zed_node/right_cam_temp                 (sensor_msgs/Temperature)
+#   /zed/zed_node/imu/temp                       (sensor_msgs/Temperature)
+#   /zed/zed_node/odom                           (nav_msgs/Odometry)
+#   /zed/zed_node/pose                           (geometry_msgs/PoseStamped)
+#   /zed/zed_node/status/health                  (zed_msgs/HealthStatusStamped)
+#   /zed/zed_node/status/heartbeat               (zed_msgs/Heartbeat)
+#   /zed/zed_node/body_trk/skeletons             (zed_msgs/ObjectsStamped)  [bt_enabled]
+#   /zed/zed_node/obj_det/objects                (zed_msgs/ObjectsStamped)  [od_enabled]
+# =============================================================================
